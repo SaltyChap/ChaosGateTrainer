@@ -54,10 +54,12 @@ The trainer features a dark-themed UI that displays cheat status and allows togg
 ## Usage
 
 1. Start **Chaos Gate: Daemonhunters** and load a save
-2. Run `ChaosGateTrainer.exe`
+2. **Right-click** `ChaosGateTrainer.exe` → **Run as administrator** (required!)
 3. Click **"Attach to Game"**
 4. Use hotkeys (F1-F8) or click checkboxes to toggle cheats
 5. Cheats are automatically disabled when closing the trainer
+
+> **Important:** The trainer must run as Administrator to access the game's memory. If you don't run as admin, the "Attach to Game" button will fail.
 
 ## How It Works
 

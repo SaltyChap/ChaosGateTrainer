@@ -6,7 +6,6 @@
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <ApplicationIcon>icon.ico</ApplicationIcon>
     <AssemblyName>ChaosGateTrainer</AssemblyName>
     <RootNamespace>ChaosGateTrainer</RootNamespace>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>

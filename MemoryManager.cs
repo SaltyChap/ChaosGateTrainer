@@ -34,13 +34,9 @@ public class MemoryManager : IDisposable
 
     public bool Attach()
     {
-        var processes = Process.GetProcessesByName("Warhammer 40000 Chaos Gate - Daemonhunters");
+        var processes = Process.GetProcessesByName("ChaosGate");
         if (processes.Length == 0)
-        {
-            processes = Process.GetProcessesByName("WH40KChaosGate");
-            if (processes.Length == 0)
-                return false;
-        }
+            return false;
 
         _gameProcess = processes[0];
         _processHandle = OpenProcess(PROCESS_ALL_ACCESS, false, _gameProcess.Id);

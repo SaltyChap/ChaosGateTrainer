@@ -20,6 +20,7 @@ public class MainForm : Form
     private Label _statusLabel = null!;
     private Panel _cheatsPanel = null!;
     private Button _attachButton = null!;
+    private Button _rescanButton = null!;
     private readonly Dictionary<Cheat, CheckBox> _cheatCheckboxes = new();
 
     public MainForm()
@@ -40,7 +41,7 @@ public class MainForm : Form
     private void InitializeUI()
     {
         Text = "Chaos Gate: Daemonhunters Trainer";
-        Size = new Size(450, 520);
+        Size = new Size(450, 540);
         FormBorderStyle = FormBorderStyle.FixedSingle;
         MaximizeBox = false;
         StartPosition = FormStartPosition.CenterScreen;
@@ -85,6 +86,21 @@ public class MainForm : Form
             AutoSize = true
         };
         statusPanel.Controls.Add(_statusLabel);
+
+        _rescanButton = new Button
+        {
+            Text = "Re-scan",
+            Font = new Font("Segoe UI", 9),
+            Size = new Size(70, 30),
+            Location = new Point(190, 10),
+            BackColor = Color.FromArgb(60, 60, 65),
+            ForeColor = Color.White,
+            FlatStyle = FlatStyle.Flat,
+            Enabled = false
+        };
+        _rescanButton.FlatAppearance.BorderColor = Color.FromArgb(80, 80, 85);
+        _rescanButton.Click += RescanButton_Click;
+        statusPanel.Controls.Add(_rescanButton);
 
         _attachButton = new Button
         {
@@ -167,7 +183,7 @@ public class MainForm : Form
         // Instructions
         var instructionsLabel = new Label
         {
-            Text = "1. Start the game and load a save\n2. Click 'Attach to Game'\n3. Use hotkeys or checkboxes to toggle cheats",
+            Text = "1. Start the game and load a save\n2. Click 'Attach to Game'\n3. Use hotkeys or checkboxes to toggle cheats\n4. Click 'Re-scan' after entering combat to find combat-only cheats",
             Font = new Font("Segoe UI", 8),
             ForeColor = Color.FromArgb(120, 120, 120),
             Location = new Point(20, 440),
@@ -216,6 +232,55 @@ public class MainForm : Form
         base.WndProc(ref m);
     }
 
+    private void RescanButton_Click(object? sender, EventArgs e)
+    {
+        if (!_memory.IsAttached) return;
+
+        // Disable cheats that were enabled before rescanning
+        _cheatManager.DisableAllCheats();
+        foreach (var checkbox in _cheatCheckboxes.Values)
+        {
+            checkbox.Checked = false;
+        }
+
+        // Rescan for patterns
+        _cheatManager.ScanForAddresses();
+        UpdateStatus();
+
+        // Update checkboxes
+        var newlyFound = new List<string>();
+        var stillNotFound = new List<string>();
+        foreach (var cheat in _cheatManager.Cheats)
+        {
+            if (_cheatCheckboxes.TryGetValue(cheat, out var checkbox))
+            {
+                bool wasEnabled = checkbox.Enabled;
+                checkbox.Enabled = cheat.Address.HasValue;
+                checkbox.ForeColor = cheat.Address.HasValue ? Color.White : Color.FromArgb(100, 100, 100);
+
+                if (cheat.Address.HasValue && !wasEnabled)
+                    newlyFound.Add($"{cheat.Name} [{cheat.Hotkey}]");
+                else if (!cheat.Address.HasValue)
+                    stillNotFound.Add($"{cheat.Name} [{cheat.Hotkey}]");
+            }
+        }
+
+        string message = "";
+        if (newlyFound.Count > 0)
+            message += $"Newly found:\n• {string.Join("\n• ", newlyFound)}\n\n";
+        if (stillNotFound.Count > 0)
+            message += $"Still not found:\n• {string.Join("\n• ", stillNotFound)}";
+
+        if (!string.IsNullOrEmpty(message))
+        {
+            MessageBox.Show(message.Trim(), "Re-scan Results", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        else
+        {
+            MessageBox.Show("All patterns found!", "Re-scan Results", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+    }
+
     private void AttachButton_Click(object? sender, EventArgs e)
     {
         if (_memory.IsAttached)
@@ -231,7 +296,8 @@ public class MainForm : Form
             _cheatManager.ScanForAddresses();
             UpdateStatus();
 
-            // Enable checkboxes for found cheats
+            // Enable checkboxes for found cheats and build diagnostic info
+            var notFound = new List<string>();
             foreach (var cheat in _cheatManager.Cheats)
             {
                 if (_cheatCheckboxes.TryGetValue(cheat, out var checkbox))
@@ -240,8 +306,19 @@ public class MainForm : Form
                     if (!cheat.Address.HasValue)
                     {
                         checkbox.ForeColor = Color.FromArgb(100, 100, 100);
+                        notFound.Add($"{cheat.Name} [{cheat.Hotkey}]");
                     }
                 }
+            }
+
+            // Show which patterns weren't found
+            if (notFound.Count > 0)
+            {
+                MessageBox.Show(
+                    $"The following cheats were not found (pattern may need updating or code not loaded yet):\n\n• {string.Join("\n• ", notFound)}\n\nTry re-attaching during combat if these are combat-related cheats.",
+                    "Some Patterns Not Found",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
             }
         }
         else
@@ -259,12 +336,14 @@ public class MainForm : Form
             _statusLabel.Text = $"Status: Attached ({foundCount}/{_cheatManager.Cheats.Count} cheats found)";
             _statusLabel.ForeColor = Color.FromArgb(80, 200, 80);
             _attachButton.Text = "Detach";
+            _rescanButton.Enabled = true;
         }
         else
         {
             _statusLabel.Text = "Status: Not attached";
             _statusLabel.ForeColor = Color.FromArgb(220, 80, 80);
             _attachButton.Text = "Attach to Game";
+            _rescanButton.Enabled = false;
 
             foreach (var checkbox in _cheatCheckboxes.Values)
             {
